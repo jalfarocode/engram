@@ -304,6 +304,34 @@ engram tui
 - Full FTS5 search from the TUI
 - Live data refresh on back-navigation
 
+## Git Sync
+
+Share memories across machines and team members by committing them to your repo.
+
+```bash
+# Export memories to .engram/memories.json (in your project repo)
+engram sync
+
+# Commit to git
+git add .engram/memories.json && git commit -m "sync engram memories"
+
+# On another machine / clone: import from repo
+engram sync --import
+
+# Export only memories from a specific project
+engram sync --project my-app
+```
+
+**How it works:**
+
+```
+Your machine                    Git repo                     Another machine
+~/.engram/engram.db  ──sync──▶  .engram/memories.json  ──▶  ~/.engram/engram.db
+      (local DB)                  (committed to git)           (sync --import)
+```
+
+**Auto-import**: The OpenCode plugin automatically imports `.engram/memories.json` when it detects one in the project directory. Clone a repo, open OpenCode, and the memories are there.
+
 ## CLI
 
 ```
@@ -317,6 +345,7 @@ engram context [project]  Recent context from previous sessions
 engram stats              Memory statistics
 engram export [file]      Export all memories to JSON
 engram import <file>      Import memories from JSON
+engram sync               Export memories to .engram/memories.json for git
 engram version            Show version
 ```
 
@@ -333,14 +362,24 @@ The plugin auto-starts the HTTP server if it's not already running — no manual
 
 The plugin:
 - **Auto-starts** the engram server if not running
+- **Auto-imports** git-synced memories from `.engram/memories.json` if present in the project
 - **Creates sessions** on-demand via `ensureSession()` (resilient to restarts/reconnects)
-- **Injects `MEMORY_INSTRUCTIONS`** into the agent's system prompt via `chat.system.transform` — the agent always knows about Engram, even after compaction
+- **Injects the Memory Protocol** into the agent's system prompt via `chat.system.transform` — strict rules for when to save, when to search, and a mandatory session close protocol
 - **Auto-saves a checkpoint** when compaction is triggered (guarantees something is persisted even if the agent never called `mem_save`)
 - **Injects previous session context** into the compaction prompt
 - **Instructs the compressor** to remind the new agent to call `mem_session_summary`
 - **Strips `<private>` tags** before sending data
 
 **No raw tool call recording** — the agent handles all memory via `mem_save` and `mem_session_summary`.
+
+### Memory Protocol (injected via system prompt)
+
+The plugin injects a strict protocol into every agent message:
+
+- **WHEN TO SAVE**: Mandatory after bugfixes, decisions, discoveries, config changes, patterns, preferences
+- **WHEN TO SEARCH**: Reactive (user says "remember"/"recordar") + proactive (starting work that might overlap past sessions)
+- **SESSION CLOSE**: Mandatory `mem_session_summary` before ending — "This is NOT optional. If you skip this, the next session starts blind."
+- **AFTER COMPACTION**: Immediately call `mem_context` to recover state
 
 ### Three Layers of Memory Resilience
 

@@ -1,5 +1,5 @@
-# Binary
-engram
+# Binary (only at root, not cmd/engram/ directory)
+/engram
 *.exe
 
 # Database

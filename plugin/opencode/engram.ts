@@ -39,27 +39,48 @@ const ENGRAM_TOOLS = new Set([
 // ─── Memory Instructions ─────────────────────────────────────────────────────
 // These get injected into the agent's context so it knows to call mem_save.
 
-const MEMORY_INSTRUCTIONS = `## Engram Memory System — Instructions
+const MEMORY_INSTRUCTIONS = `## Engram Persistent Memory — Protocol
 
-You have access to a persistent memory system (Engram). Use it PROACTIVELY:
+You have access to Engram, a persistent memory system that survives across sessions and compactions.
 
-### During the session:
-After completing significant work (bug fix, architectural decision, new feature, config change),
-call \`mem_save\` with a structured summary. Use this format:
+### WHEN TO SAVE (mandatory — not optional)
 
-- **title**: Short, searchable (e.g. "JWT auth middleware", "Fixed N+1 query")
-- **type**: decision | architecture | bugfix | pattern | config | discovery
-- **content**: Use this structure:
-  **What**: [concise description of what was done]
-  **Why**: [reasoning or user request that drove it]
-  **Where**: [files/paths affected]
-  **Learned**: [gotchas, edge cases, or decisions — omit if none]
+Call \`mem_save\` IMMEDIATELY after any of these:
+- Bug fix completed
+- Architecture or design decision made
+- Non-obvious discovery about the codebase
+- Configuration change or environment setup
+- Pattern established (naming, structure, convention)
+- User preference or constraint learned
 
-### When the session is ending:
-Call \`mem_session_summary\` with a comprehensive summary using this format:
+Format for \`mem_save\`:
+- **title**: Verb + what — short, searchable (e.g. "Fixed N+1 query in UserList", "Chose Zustand over Redux")
+- **type**: bugfix | decision | architecture | discovery | pattern | config | preference
+- **content**:
+  **What**: One sentence — what was done
+  **Why**: What motivated it (user request, bug, performance, etc.)
+  **Where**: Files or paths affected
+  **Learned**: Gotchas, edge cases, things that surprised you (omit if none)
+
+### WHEN TO SEARCH MEMORY
+
+When the user asks to recall something — any variation of "remember", "recall", "what did we do",
+"how did we solve", "recordar", "acordate", "qué hicimos", or references to past work:
+1. First call \`mem_context\` — checks recent session history (fast, cheap)
+2. If not found, call \`mem_search\` with relevant keywords (FTS5 full-text search)
+3. If you find a match, use \`mem_get_observation\` for full untruncated content
+
+Also search memory PROACTIVELY when:
+- Starting work on something that might have been done before
+- The user mentions a topic you have no context on — check if past sessions covered it
+
+### SESSION CLOSE PROTOCOL (mandatory)
+
+Before ending a session or saying "done" / "listo" / "that's it", you MUST:
+1. Call \`mem_session_summary\` with this structure:
 
 ## Goal
-[What we were building/working on]
+[What we were working on this session]
 
 ## Instructions
 [User preferences or constraints discovered — skip if none]
@@ -68,13 +89,20 @@ Call \`mem_session_summary\` with a comprehensive summary using this format:
 - [Technical findings, gotchas, non-obvious learnings]
 
 ## Accomplished
-- ✅ [Completed task — with key details]
-- 🔲 [Not yet done — for next session]
+- [Completed items with key details]
+
+## Next Steps
+- [What remains to be done — for the next session]
 
 ## Relevant Files
-- path/to/file — [what it does or changed]
+- path/to/file — [what it does or what changed]
 
-DO NOT wait to be asked. Save memories proactively. Future you will thank present you.
+This is NOT optional. If you skip this, the next session starts blind.
+
+### AFTER COMPACTION
+
+If you see a message about compaction or context reset, IMMEDIATELY call \`mem_context\` to recover
+what was being worked on before the compaction happened. Do not continue blind.
 `
 
 // ─── HTTP Client ─────────────────────────────────────────────────────────────
@@ -169,6 +197,20 @@ export const Engram: Plugin = async (ctx) => {
     } catch {
       // Binary not found or can't start — plugin will silently no-op
     }
+  }
+
+  // Auto-import: if .engram/memories.json exists in the project repo,
+  // import it into the local DB. This is how git-synced memories get
+  // loaded when cloning a repo or pulling changes.
+  try {
+    const syncFile = `${ctx.directory}/.engram/memories.json`
+    const file = Bun.file(syncFile)
+    if (await file.exists()) {
+      const data = await file.json()
+      await engramFetch("/import", { method: "POST", body: data })
+    }
+  } catch {
+    // File doesn't exist or can't parse — silently skip
   }
 
   return {

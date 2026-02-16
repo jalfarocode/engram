@@ -93,6 +93,7 @@ engram context [project]  Show recent context from previous sessions
 engram stats              Show memory system statistics
 engram export [file]      Export all memories to JSON (default: engram-export.json)
 engram import <file>      Import memories from a JSON export file
+engram sync               Export to .engram/memories.json [--import] [--project NAME]
 engram version            Print version
 engram help               Show help
 ```
@@ -317,7 +318,24 @@ Share memories across machines, backup, or migrate:
 - `engram export` — JSON dump of all sessions, observations, prompts
 - `engram import <file>` — Load from JSON, sessions use INSERT OR IGNORE (skip duplicates), atomic transaction
 
-### 6. AI Compression (Agent-Driven)
+### 6. Git Sync
+
+Share memories through git repositories:
+
+- `engram sync` — Exports memories to `.engram/memories.json` in the current directory (ready for `git add && git commit`)
+- `engram sync --import` — Imports from `.engram/memories.json` into the local DB
+- `engram sync --project NAME` — Filters export to a specific project (only sessions and observations matching that project)
+
+**Auto-import**: The OpenCode plugin automatically imports `.engram/memories.json` when it detects one in the project directory at startup. This means: clone a repo → open OpenCode → memories are loaded automatically.
+
+**Flow**:
+```
+Your machine                    Git repo                     Another machine
+~/.engram/engram.db  ──sync──▶  .engram/memories.json  ──▶  ~/.engram/engram.db
+      (local DB)                  (committed to git)           (sync --import)
+```
+
+### 7. AI Compression (Agent-Driven)
 
 Instead of a separate LLM service, the agent itself compresses observations. The agent already has the model, context, and API key.
 
@@ -342,9 +360,9 @@ Instead of a separate LLM service, the agent itself compresses observations. The
   ## Relevant Files
   ```
 
-The OpenCode plugin injects `MEMORY_INSTRUCTIONS` during compaction to teach agents both formats.
+The OpenCode plugin injects the **Memory Protocol** via system prompt to teach agents both formats, plus strict rules about when to save and a mandatory session close protocol.
 
-### 7. No Raw Auto-Capture (Agent-Only Memory)
+### 8. No Raw Auto-Capture (Agent-Only Memory)
 
 The OpenCode plugin does NOT auto-capture raw tool calls. All memory comes from the agent itself:
 
@@ -362,11 +380,13 @@ The plugin still counts tool calls per session (for session end summary stats) b
 Located at `~/.config/opencode/plugins/engram.ts`. A thin TypeScript adapter that:
 
 1. **Auto-starts** the engram binary if not running
-2. **Captures events**: `session.created`, `session.idle`, `session.deleted`, `message.updated`
-3. **Tracks tool count**: Counts tool calls per session (for session end stats), but does NOT persist raw tool observations
-4. **Captures user prompts**: From `message.updated` events (>10 chars)
-5. **Injects context**: On compaction, injects `MEMORY_INSTRUCTIONS` + previous session context
-6. **Privacy**: Strips `<private>` tags before sending to HTTP API
+2. **Auto-imports** git-synced memories from `.engram/memories.json` if present in the project
+3. **Captures events**: `session.created`, `session.idle`, `session.deleted`, `message.updated`
+4. **Tracks tool count**: Counts tool calls per session (for session end stats), but does NOT persist raw tool observations
+5. **Captures user prompts**: From `message.updated` events (>10 chars)
+6. **Injects Memory Protocol**: Strict rules for when to save, when to search, and mandatory session close protocol — via `chat.system.transform`
+7. **Injects context on compaction**: Auto-saves checkpoint + injects previous session context + reminds compressor
+8. **Privacy**: Strips `<private>` tags before sending to HTTP API
 
 ### Session Resilience
 
