@@ -383,12 +383,11 @@ The plugin auto-starts the HTTP server if it's not already running — no manual
 
 The plugin:
 - **Auto-starts** the engram server if not running
-- **Auto-imports** git-synced memories from `.engram/memories.json` if present in the project
+- **Auto-imports** git-synced memories from `.engram/manifest.json` if present in the project
 - **Creates sessions** on-demand via `ensureSession()` (resilient to restarts/reconnects)
 - **Injects the Memory Protocol** into the agent's system prompt via `chat.system.transform` — strict rules for when to save, when to search, and a mandatory session close protocol
-- **Auto-saves a checkpoint** when compaction is triggered (guarantees something is persisted even if the agent never called `mem_save`)
 - **Injects previous session context** into the compaction prompt
-- **Instructs the compressor** to remind the new agent to call `mem_session_summary`
+- **Instructs the compressor** to tell the new agent to persist the compacted summary via `mem_session_summary`
 - **Strips `<private>` tags** before sending data
 
 **No raw tool call recording** — the agent handles all memory via `mem_save` and `mem_session_summary`.
