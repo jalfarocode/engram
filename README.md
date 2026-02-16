@@ -307,7 +307,6 @@ engram tui
 
 **Features**:
 - Catppuccin Mocha color palette
-- `(active)` badges on live sessions, sorted to the top
 - Scroll indicators for long lists
 - Full FTS5 search from the TUI
 - Live data refresh on back-navigation
@@ -318,6 +317,7 @@ Share memories across machines and team members by committing them to your repo.
 
 ```bash
 # Export new memories as a compressed chunk
+# (automatically filters by current directory name as project)
 engram sync
 
 # Commit to git
@@ -329,8 +329,8 @@ engram sync --import
 # Check sync status
 engram sync --status
 
-# Export only memories from a specific project
-engram sync --project my-app
+# Override project detection if needed
+engram sync --project other-name
 ```
 
 **How it works:**
