@@ -33,12 +33,23 @@ SQLite + FTS5 (~/.engram/engram.db)
 
 ## Quick Start
 
+### Install via Homebrew (recommended)
+
 ```bash
-# Install from source
+brew install gentleman-programming/tap/engram
+```
+
+### Install from source
+
+```bash
 git clone https://github.com/Gentleman-Programming/engram.git
 cd engram
 go install ./cmd/engram
 ```
+
+### Download binary
+
+Grab the latest release for your platform from [GitHub Releases](https://github.com/Gentleman-Programming/engram/releases).
 
 Then add Engram to your agent's MCP config — see [Agent Setup](#agent-setup) below.
 
@@ -441,7 +452,7 @@ engram/
 
 ## Requirements
 
-- **Go 1.21+** to build
+- **Go 1.25+** to build from source (not needed if installing via Homebrew or downloading a binary)
 - That's it. No runtime dependencies.
 
 The binary includes SQLite (via [modernc.org/sqlite](https://pkg.go.dev/modernc.org/sqlite) — pure Go, no CGO).
