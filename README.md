@@ -134,6 +134,24 @@ Engram works with **any MCP-compatible agent**. Add it to your agent's MCP confi
 
 > **Prerequisite**: Install the `engram` binary first (via [Homebrew](#install-via-homebrew-recommended), [binary download](#download-binary), or [source](#install-from-source)). The plugin needs it for the MCP server and session tracking.
 
+**Recommended: Full setup with one command** — installs the plugin AND registers the MCP server in `opencode.json` automatically:
+
+```bash
+engram setup opencode
+```
+
+This does two things:
+1. Copies the plugin to `~/.config/opencode/plugins/engram.ts` (session tracking, Memory Protocol, compaction recovery)
+2. Adds the `engram` MCP server entry to your `opencode.json` (the 10 memory tools)
+
+The plugin also needs the HTTP server running for session tracking:
+
+```bash
+engram serve &
+```
+
+**Alternative: Manual MCP-only setup** (no plugin, just the 10 memory tools):
+
 Add to your `opencode.json` (global: `~/.config/opencode/opencode.json` or project-level):
 
 ```json
@@ -148,20 +166,7 @@ Add to your `opencode.json` (global: `~/.config/opencode/opencode.json` or proje
 }
 ```
 
-**Optional: OpenCode plugin** for enhanced session management (auto-session tracking, compaction memory persistence, system prompt injection):
-
-```bash
-engram setup opencode
-# or manually: cp plugin/opencode/engram.ts ~/.config/opencode/plugins/
-```
-
-The plugin is auto-loaded from `~/.config/opencode/plugins/` — no config changes needed. It also needs the HTTP server running for session tracking:
-
-```bash
-engram serve &
-```
-
-See [OpenCode Plugin](#opencode-plugin) for details.
+See [OpenCode Plugin](#opencode-plugin) for details on what the plugin provides beyond bare MCP.
 
 ### Claude Code
 

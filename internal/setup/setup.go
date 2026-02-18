@@ -6,6 +6,7 @@ package setup
 
 import (
 	"embed"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -79,11 +80,110 @@ func installOpenCode() (*Result, error) {
 		return nil, fmt.Errorf("write %s: %w", dest, err)
 	}
 
+	// Register engram MCP server in opencode.json
+	files := 1
+	if err := injectOpenCodeMCP(); err != nil {
+		// Non-fatal: plugin works, MCP just needs manual config
+		fmt.Fprintf(os.Stderr, "warning: could not auto-register MCP server in opencode.json: %v\n", err)
+		fmt.Fprintf(os.Stderr, "  Add manually to your opencode.json under \"mcp\":\n")
+		fmt.Fprintf(os.Stderr, "  \"engram\": { \"type\": \"local\", \"command\": [\"engram\", \"mcp\"], \"enabled\": true }\n")
+	} else {
+		files = 2
+	}
+
 	return &Result{
 		Agent:       "opencode",
 		Destination: dir,
-		Files:       1,
+		Files:       files,
 	}, nil
+}
+
+// injectOpenCodeMCP adds the engram MCP server entry to opencode.json.
+// It reads the existing config, adds/updates the engram entry under "mcp",
+// and writes it back preserving all other settings.
+func injectOpenCodeMCP() error {
+	configPath := openCodeConfigPath()
+
+	// Read existing config (or start with empty object)
+	var config map[string]json.RawMessage
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			config = make(map[string]json.RawMessage)
+		} else {
+			return fmt.Errorf("read config: %w", err)
+		}
+	} else {
+		if err := json.Unmarshal(data, &config); err != nil {
+			return fmt.Errorf("parse config: %w", err)
+		}
+	}
+
+	// Parse or create the "mcp" block
+	var mcpBlock map[string]json.RawMessage
+	if raw, exists := config["mcp"]; exists {
+		if err := json.Unmarshal(raw, &mcpBlock); err != nil {
+			return fmt.Errorf("parse mcp block: %w", err)
+		}
+	} else {
+		mcpBlock = make(map[string]json.RawMessage)
+	}
+
+	// Check if engram is already registered
+	if _, exists := mcpBlock["engram"]; exists {
+		return nil // already registered, nothing to do
+	}
+
+	// Add engram MCP entry
+	engramEntry := map[string]interface{}{
+		"type":    "local",
+		"command": []string{"engram", "mcp"},
+		"enabled": true,
+	}
+	entryJSON, err := json.Marshal(engramEntry)
+	if err != nil {
+		return fmt.Errorf("marshal engram entry: %w", err)
+	}
+	mcpBlock["engram"] = json.RawMessage(entryJSON)
+
+	// Write mcp block back to config
+	mcpJSON, err := json.Marshal(mcpBlock)
+	if err != nil {
+		return fmt.Errorf("marshal mcp block: %w", err)
+	}
+	config["mcp"] = json.RawMessage(mcpJSON)
+
+	// Write config back with indentation
+	output, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal config: %w", err)
+	}
+
+	if err := os.WriteFile(configPath, output, 0644); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+
+	return nil
+}
+
+// openCodeConfigPath returns the path to opencode.json.
+func openCodeConfigPath() string {
+	home, _ := os.UserHomeDir()
+
+	switch runtime.GOOS {
+	case "darwin", "linux":
+		if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+			return filepath.Join(xdg, "opencode", "opencode.json")
+		}
+		return filepath.Join(home, ".config", "opencode", "opencode.json")
+	case "windows":
+		if appData := os.Getenv("APPDATA"); appData != "" {
+			return filepath.Join(appData, "opencode", "opencode.json")
+		}
+		return filepath.Join(home, "AppData", "Roaming", "opencode", "opencode.json")
+	default:
+		return filepath.Join(home, ".config", "opencode", "opencode.json")
+	}
 }
 
 // ─── Claude Code ─────────────────────────────────────────────────────────────

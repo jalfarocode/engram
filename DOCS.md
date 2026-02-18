@@ -394,7 +394,9 @@ The plugin still counts tool calls per session (for session end summary stats) b
 
 ## OpenCode Plugin
 
-Located at `~/.config/opencode/plugins/engram.ts`. A thin TypeScript adapter that:
+Install with `engram setup opencode` — this copies the plugin to `~/.config/opencode/plugins/engram.ts` AND auto-registers the MCP server in `opencode.json`.
+
+A thin TypeScript adapter that:
 
 1. **Auto-starts** the engram binary if not running
 2. **Auto-imports** git-synced memories from `.engram/memories.json` if present in the project
