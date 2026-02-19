@@ -1,9 +1,10 @@
 <p align="center">
-  <h1 align="center">engram</h1>
-  <p align="center"><strong>Persistent memory for AI coding agents</strong></p>
-  <p align="center">
-    <em>Agent-agnostic. Single binary. Zero dependencies.</em>
-  </p>
+  <img src="assets/engram-banner.png" width="600" alt="Engram - An elephant never forgets">
+</p>
+
+<p align="center">
+  <strong>Persistent memory for AI coding agents</strong><br>
+  <em>Agent-agnostic. Single binary. Zero dependencies.</em>
 </p>
 
 <p align="center">
