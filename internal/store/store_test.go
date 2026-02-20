@@ -1,9 +1,13 @@
 package store
 
 import (
+	"database/sql"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	_ "modernc.org/sqlite"
 )
 
 func newTestStore(t *testing.T) *Store {
@@ -310,6 +314,101 @@ func TestDifferentTopicsDoNotReplaceEachOther(t *testing.T) {
 	}
 	if len(observations) != 2 {
 		t.Fatalf("expected 2 observations, got %d", len(observations))
+	}
+}
+
+func TestNewMigratesLegacyObservationIDSchema(t *testing.T) {
+	dataDir := t.TempDir()
+	dbPath := filepath.Join(dataDir, "engram.db")
+
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open legacy db: %v", err)
+	}
+
+	_, err = db.Exec(`
+		CREATE TABLE sessions (
+			id TEXT PRIMARY KEY,
+			project TEXT NOT NULL,
+			directory TEXT NOT NULL,
+			started_at TEXT NOT NULL DEFAULT (datetime('now')),
+			ended_at TEXT,
+			summary TEXT
+		);
+		CREATE TABLE observations (
+			id INT,
+			session_id TEXT,
+			type TEXT,
+			title TEXT,
+			content TEXT,
+			tool_name TEXT,
+			project TEXT,
+			created_at TEXT
+		);
+		INSERT INTO sessions (id, project, directory) VALUES ('s1', 'engram', '/tmp/engram');
+		INSERT INTO observations (id, session_id, type, title, content, project, created_at)
+		VALUES
+			(NULL, 's1', 'bugfix', 'legacy null', 'legacy null content', 'engram', datetime('now')),
+			(7, 's1', 'bugfix', 'legacy fixed', 'legacy fixed content', 'engram', datetime('now')),
+			(7, 's1', 'bugfix', 'legacy duplicate', 'legacy duplicate content', 'engram', datetime('now'));
+	`)
+	if err != nil {
+		_ = db.Close()
+		t.Fatalf("seed legacy db: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("close legacy db: %v", err)
+	}
+
+	cfg := DefaultConfig()
+	cfg.DataDir = dataDir
+
+	s, err := New(cfg)
+	if err != nil {
+		t.Fatalf("new store after legacy schema: %v", err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+
+	obs, err := s.AllObservations("engram", "", 20)
+	if err != nil {
+		t.Fatalf("all observations after migration: %v", err)
+	}
+	if len(obs) != 3 {
+		t.Fatalf("expected 3 migrated observations, got %d", len(obs))
+	}
+
+	seen := make(map[int64]bool)
+	for _, o := range obs {
+		if o.ID <= 0 {
+			t.Fatalf("expected migrated observation id > 0, got %d", o.ID)
+		}
+		if seen[o.ID] {
+			t.Fatalf("expected unique migrated ids, duplicate %d", o.ID)
+		}
+		seen[o.ID] = true
+	}
+
+	results, err := s.Search("legacy", SearchOptions{Project: "engram", Limit: 10})
+	if err != nil {
+		t.Fatalf("search after migration: %v", err)
+	}
+	if len(results) == 0 {
+		t.Fatalf("expected search results after migration")
+	}
+
+	newID, err := s.AddObservation(AddObservationParams{
+		SessionID: "s1",
+		Type:      "bugfix",
+		Title:     "post migration",
+		Content:   "new row should get id",
+		Project:   "engram",
+		Scope:     "project",
+	})
+	if err != nil {
+		t.Fatalf("add observation after migration: %v", err)
+	}
+	if newID <= 0 {
+		t.Fatalf("expected autoincrement id after migration, got %d", newID)
 	}
 }
 

@@ -307,6 +307,10 @@ func (s *Store) migrate() error {
 		}
 	}
 
+	if err := s.migrateLegacyObservationsTable(); err != nil {
+		return err
+	}
+
 	if _, err := s.db.Exec(`
 		CREATE INDEX IF NOT EXISTS idx_obs_scope ON observations(scope);
 		CREATE INDEX IF NOT EXISTS idx_obs_topic ON observations(topic_key, project, scope, updated_at DESC);
@@ -1355,6 +1359,138 @@ func (s *Store) addColumnIfNotExists(tableName, columnName, definition string) e
 
 	_, err = s.db.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", tableName, columnName, definition))
 	return err
+}
+
+func (s *Store) migrateLegacyObservationsTable() error {
+	rows, err := s.db.Query("PRAGMA table_info(observations)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var hasID bool
+	var idIsPrimaryKey bool
+	for rows.Next() {
+		var cid int
+		var name, typ string
+		var notNull int
+		var defaultValue any
+		var pk int
+		if err := rows.Scan(&cid, &name, &typ, &notNull, &defaultValue, &pk); err != nil {
+			return err
+		}
+		if name == "id" {
+			hasID = true
+			idIsPrimaryKey = pk == 1
+			break
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	if !hasID || idIsPrimaryKey {
+		return nil
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("migrate legacy observations: begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(`
+		CREATE TABLE observations_migrated (
+			id         INTEGER PRIMARY KEY AUTOINCREMENT,
+			session_id TEXT    NOT NULL,
+			type       TEXT    NOT NULL,
+			title      TEXT    NOT NULL,
+			content    TEXT    NOT NULL,
+			tool_name  TEXT,
+			project    TEXT,
+			scope      TEXT    NOT NULL DEFAULT 'project',
+			topic_key  TEXT,
+			normalized_hash TEXT,
+			revision_count INTEGER NOT NULL DEFAULT 1,
+			duplicate_count INTEGER NOT NULL DEFAULT 1,
+			last_seen_at TEXT,
+			created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+			updated_at TEXT    NOT NULL DEFAULT (datetime('now')),
+			deleted_at TEXT,
+			FOREIGN KEY (session_id) REFERENCES sessions(id)
+		);
+	`); err != nil {
+		return fmt.Errorf("migrate legacy observations: create table: %w", err)
+	}
+
+	if _, err := tx.Exec(`
+		INSERT INTO observations_migrated (
+			id, session_id, type, title, content, tool_name, project,
+			scope, topic_key, normalized_hash, revision_count, duplicate_count,
+			last_seen_at, created_at, updated_at, deleted_at
+		)
+		SELECT
+			CASE
+				WHEN id IS NULL THEN NULL
+				WHEN ROW_NUMBER() OVER (PARTITION BY id ORDER BY rowid) = 1 THEN CAST(id AS INTEGER)
+				ELSE NULL
+			END,
+			session_id,
+			COALESCE(NULLIF(type, ''), 'manual'),
+			COALESCE(NULLIF(title, ''), 'Untitled observation'),
+			COALESCE(content, ''),
+			tool_name,
+			project,
+			CASE WHEN scope IS NULL OR scope = '' THEN 'project' ELSE scope END,
+			NULLIF(topic_key, ''),
+			normalized_hash,
+			CASE WHEN revision_count IS NULL OR revision_count < 1 THEN 1 ELSE revision_count END,
+			CASE WHEN duplicate_count IS NULL OR duplicate_count < 1 THEN 1 ELSE duplicate_count END,
+			last_seen_at,
+			COALESCE(NULLIF(created_at, ''), datetime('now')),
+			COALESCE(NULLIF(updated_at, ''), NULLIF(created_at, ''), datetime('now')),
+			deleted_at
+		FROM observations
+		ORDER BY rowid;
+	`); err != nil {
+		return fmt.Errorf("migrate legacy observations: copy rows: %w", err)
+	}
+
+	if _, err := tx.Exec("DROP TABLE observations"); err != nil {
+		return fmt.Errorf("migrate legacy observations: drop old table: %w", err)
+	}
+
+	if _, err := tx.Exec("ALTER TABLE observations_migrated RENAME TO observations"); err != nil {
+		return fmt.Errorf("migrate legacy observations: rename table: %w", err)
+	}
+
+	if _, err := tx.Exec(`
+		DROP TRIGGER IF EXISTS obs_fts_insert;
+		DROP TRIGGER IF EXISTS obs_fts_update;
+		DROP TRIGGER IF EXISTS obs_fts_delete;
+		DROP TABLE IF EXISTS observations_fts;
+		CREATE VIRTUAL TABLE observations_fts USING fts5(
+			title,
+			content,
+			tool_name,
+			type,
+			project,
+			content='observations',
+			content_rowid='id'
+		);
+		INSERT INTO observations_fts(rowid, title, content, tool_name, type, project)
+		SELECT id, title, content, tool_name, type, project
+		FROM observations
+		WHERE deleted_at IS NULL;
+	`); err != nil {
+		return fmt.Errorf("migrate legacy observations: rebuild fts: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("migrate legacy observations: commit: %w", err)
+	}
+
+	return nil
 }
 
 func nullableString(s string) *string {
