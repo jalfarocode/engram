@@ -298,7 +298,7 @@ func (s *Store) migrate() error {
 		{name: "revision_count", definition: "INTEGER NOT NULL DEFAULT 1"},
 		{name: "duplicate_count", definition: "INTEGER NOT NULL DEFAULT 1"},
 		{name: "last_seen_at", definition: "TEXT"},
-		{name: "updated_at", definition: "TEXT NOT NULL DEFAULT (datetime('now'))"},
+		{name: "updated_at", definition: "TEXT NOT NULL DEFAULT ''"},
 		{name: "deleted_at", definition: "TEXT"},
 	}
 	for _, c := range observationColumns {
