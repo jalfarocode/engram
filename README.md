@@ -583,11 +583,12 @@ claude --plugin-dir ./plugin/claude-code
 plugin/claude-code/
 ├── .claude-plugin/plugin.json     # Plugin manifest
 ├── .mcp.json                      # Registers engram MCP server
-├── hooks/hooks.json               # SessionStart + Stop lifecycle hooks
+├── hooks/hooks.json               # SessionStart + SubagentStop + Stop lifecycle hooks
 ├── scripts/
 │   ├── session-start.sh           # Ensures server, creates session, imports chunks, injects context
 │   ├── post-compaction.sh         # Injects previous context + recovery instructions
-│   └── session-stop.sh            # Placeholder for future heartbeat
+│   ├── subagent-stop.sh           # Passive capture trigger on subagent completion
+│   └── session-stop.sh            # Logs end-of-session event
 └── skills/memory/SKILL.md         # Memory Protocol (when to save, search, close, recover)
 ```
 
@@ -644,10 +645,13 @@ engram/
 │       ├── .claude-plugin/plugin.json
 │       ├── .mcp.json
 │       ├── hooks/hooks.json
-│       ├── scripts/                # session-start, post-compaction, session-stop
+│       ├── scripts/                # session-start, post-compaction, subagent-stop, session-stop
 │       └── skills/memory/SKILL.md
+├── skills/                         # Contributor AI skills (repo-wide standards)
+├── setup.sh                        # Links repo skills into .claude/.codex/.gemini (project-local)
 ├── assets/                         # Screenshots and media
 ├── DOCS.md                         # Full technical documentation
+├── CONTRIBUTING.md                 # Contribution workflow and standards
 ├── go.mod
 └── go.sum
 ```
