@@ -610,6 +610,18 @@ It has multiple lines but no ## Key Learnings or similar.
 	}
 }
 
+func TestExtractLearningsSectionPresentButNoValidItems(t *testing.T) {
+	text := `## Key Learnings:
+
+1. short
+2. tiny
+`
+	learnings := ExtractLearnings(text)
+	if len(learnings) != 0 {
+		t.Fatalf("expected 0 learnings when section has no valid items, got %d: %v", len(learnings), learnings)
+	}
+}
+
 func TestExtractLearningsUsesLastSection(t *testing.T) {
 	text := `## Key Learnings:
 
@@ -627,6 +639,36 @@ Some other text here.
 	}
 	if !strings.Contains(learnings[0], "last section") {
 		t.Fatalf("expected learning from last section, got %q", learnings[0])
+	}
+}
+
+func TestExtractLearningsFallsBackWhenLastSectionHasNoValidItems(t *testing.T) {
+	text := `## Key Learnings:
+
+1. This is long enough and should be captured from the previous section
+
+## Key Learnings:
+
+1. short
+2. tiny
+`
+	learnings := ExtractLearnings(text)
+	if len(learnings) != 1 {
+		t.Fatalf("expected fallback to previous valid section, got %d: %v", len(learnings), learnings)
+	}
+	if !strings.Contains(learnings[0], "previous section") {
+		t.Fatalf("expected learning from previous section, got %q", learnings[0])
+	}
+}
+
+func TestExtractLearningsCleansMarkdown(t *testing.T) {
+	text := "## Key Learnings:\n\n1. **Use** `context.Context` in *all* handlers to support cancellation correctly\n"
+	learnings := ExtractLearnings(text)
+	if len(learnings) != 1 {
+		t.Fatalf("expected 1 learning, got %d: %v", len(learnings), learnings)
+	}
+	if strings.Contains(learnings[0], "**") || strings.Contains(learnings[0], "`") || strings.Contains(learnings[0], "*") {
+		t.Fatalf("expected markdown to be stripped, got %q", learnings[0])
 	}
 }
 
@@ -669,6 +711,9 @@ func TestPassiveCaptureStoresLearnings(t *testing.T) {
 		if o.Type != "passive" {
 			t.Fatalf("expected type=passive, got %q", o.Type)
 		}
+	}
+	if obs[0].ToolName == nil || *obs[0].ToolName != "test" {
+		t.Fatalf("expected tool_name source to be stored as 'test', got %+v", obs[0].ToolName)
 	}
 }
 
@@ -736,6 +781,24 @@ func TestPassiveCaptureDedupesAgainstExistingObservations(t *testing.T) {
 	}
 	if result.Duplicates != 1 {
 		t.Fatalf("expected 1 duplicate, got %d", result.Duplicates)
+	}
+}
+
+func TestPassiveCaptureReturnsErrorWhenSessionDoesNotExist(t *testing.T) {
+	s := newTestStore(t)
+
+	text := `## Key Learnings:
+
+1. This learning is long enough to attempt insert and fail without session
+`
+	_, err := s.PassiveCapture(PassiveCaptureParams{
+		SessionID: "missing-session",
+		Content:   text,
+		Project:   "engram",
+		Source:    "test",
+	})
+	if err == nil {
+		t.Fatalf("expected error when session does not exist")
 	}
 }
 

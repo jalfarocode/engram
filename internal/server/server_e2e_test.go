@@ -246,3 +246,46 @@ func TestPassiveCaptureEndpointEmptyContentE2E(t *testing.T) {
 		t.Fatalf("expected 0 extracted, got %v", body["extracted"])
 	}
 }
+
+func TestPassiveCaptureEndpointRequiresSessionID(t *testing.T) {
+	_, ts := newE2EServer(t)
+	client := ts.Client()
+
+	captureResp := postJSON(t, client, ts.URL+"/observations/passive", map[string]any{
+		"project": "engram",
+		"content": "## Key Learnings:\n\n1. This should fail because session_id is missing",
+	})
+	if captureResp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 when session_id is missing, got %d", captureResp.StatusCode)
+	}
+}
+
+func TestPassiveCaptureEndpointInvalidJSON(t *testing.T) {
+	_, ts := newE2EServer(t)
+	client := ts.Client()
+
+	resp, err := client.Post(ts.URL+"/observations/passive", "application/json", strings.NewReader("{"))
+	if err != nil {
+		t.Fatalf("post invalid json: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid json, got %d", resp.StatusCode)
+	}
+}
+
+func TestPassiveCaptureEndpointReturnsServerErrorWhenSessionMissing(t *testing.T) {
+	_, ts := newE2EServer(t)
+	client := ts.Client()
+
+	// No session created; saving observations should fail with FK constraint.
+	captureResp := postJSON(t, client, ts.URL+"/observations/passive", map[string]any{
+		"session_id": "missing-session",
+		"project":    "engram",
+		"content":    "## Key Learnings:\n\n1. This long learning should trigger a DB insert and fail on FK",
+	})
+	if captureResp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected 500 when session does not exist, got %d", captureResp.StatusCode)
+	}
+}
