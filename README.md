@@ -11,6 +11,7 @@
   <a href="#quick-start">Quick Start</a> &bull;
   <a href="#how-it-works">How It Works</a> &bull;
   <a href="#agent-setup">Agent Setup</a> &bull;
+  <a href="CONTRIBUTING.md">Contributing</a> &bull;
   <a href="#why-not-claude-mem">Why Not claude-mem?</a> &bull;
   <a href="#tui">Terminal UI</a> &bull;
   <a href="DOCS.md">Full Docs</a>
