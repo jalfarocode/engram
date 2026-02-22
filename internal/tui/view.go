@@ -11,11 +11,11 @@ import (
 
 func renderLogo() string {
 	logoText := []string{
-		`    ______     _   __   ______   ______     ___       __  ___ `,
-		`   / ____/    / | / /  / ____/  / __  /    /   |     /  |/  / `,
-		`  / __/ /    /  |/ /  / / __   / /_/ /    / /| |    / /|_/ /  `,
-		` / /___/    / /|  /  / /_/ /  / _  _/    / ___ |   / /  / /   `,
-		`/_____/    /_/ |_/   \____/  /_/ |_|    /_/  |_|  /_/  /_/    `,
+		`███████ ███    ██  ██████  ██████   █████  ███    ███ `,
+		`██      ████   ██ ██       ██   ██ ██   ██ ████  ████ `,
+		`█████   ██ ██  ██ ██   ███ ██████  ███████ ██ ████ ██ `,
+		`██      ██  ██ ██ ██    ██ ██   ██ ██   ██ ██  ██  ██ `,
+		`███████ ██   ████  ██████  ██   ██ ██   ██ ██      ██ `,
 	}
 
 	frameStyle := lipgloss.NewStyle().
@@ -24,18 +24,30 @@ func renderLogo() string {
 		Padding(0, 1).
 		MarginBottom(1)
 
-	textStyle := lipgloss.NewStyle().Foreground(colorText).Bold(true)
+	// Gradient colors for the rows
+	colors := []lipgloss.Color{
+		colorMauve,    // Top (Pinkish)
+		colorLavender, // Middle-top
+		colorBlue,     // Middle
+		colorTeal,     // Middle-bottom
+		colorGreen,    // Bottom (Cyan/Greenish)
+	}
+
 	accentStyle := lipgloss.NewStyle().Foreground(colorLavender).Bold(true)
 	taglineStyle := lipgloss.NewStyle().Foreground(colorSubtext).Italic(true)
 
 	var b strings.Builder
 
-	// Header line inside box
-	b.WriteString(accentStyle.Render(" ⚡ SYSTEM ONLINE ") + strings.Repeat(" ", 32) + accentStyle.Render(" MEM: OK 100% ") + "\n\n")
+	// Header line inside box (Cyber-Elephant Terminal)
+	b.WriteString(accentStyle.Render(" 🐘 SYSTEM ONLINE ") + strings.Repeat(" ", 32) + accentStyle.Render(" MEM: OK 100% ") + "\n\n")
 
-	// Logo body
-	for _, line := range logoText {
-		b.WriteString(" " + textStyle.Render(line) + "\n")
+	// Logo body with gradient
+	for i, line := range logoText {
+		if i < len(colors) {
+			b.WriteString(" " + lipgloss.NewStyle().Foreground(colors[i]).Bold(true).Render(line) + "\n")
+		} else {
+			b.WriteString(" " + lipgloss.NewStyle().Foreground(colorText).Bold(true).Render(line) + "\n")
+		}
 	}
 	b.WriteString("\n")
 
