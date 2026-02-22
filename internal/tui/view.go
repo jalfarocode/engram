@@ -10,27 +10,39 @@ import (
 // ─── Logo ────────────────────────────────────────────────────────────────────
 
 func renderLogo() string {
-	brandLines := []string{
-		`    ______  _   ________  ____  ___    __  ___`,
-		`   / ____/ / | / / ____/ / __ \/   |  /  |/  /`,
-		`  / __/   /  |/ / / __  / /_/ / /| | / /|_/ / `,
-		` / /___  / /|  / /_/ / / _, _/ ___ |/ /  / /  `,
-		`/_____/ /_/ |_/\____/ /_/ |_/_/  |_/_/  /_/   `,
+	logoText := []string{
+		`    ______     _   __   ______   ______     ___       __  ___ `,
+		`   / ____/    / | / /  / ____/  / __  /    /   |     /  |/  / `,
+		`  / __/ /    /  |/ /  / / __   / /_/ /    / /| |    / /|_/ /  `,
+		` / /___/    / /|  /  / /_/ /  / _  _/    / ___ |   / /  / /   `,
+		`/_____/    /_/ |_/   \____/  /_/ |_|    /_/  |_|  /_/  /_/    `,
 	}
 
-	colors := []lipgloss.Color{colorTeal, colorLavender, colorMauve, colorLavender, colorTeal}
+	frameStyle := lipgloss.NewStyle().
+		Border(lipgloss.DoubleBorder()).
+		BorderForeground(colorOverlay).
+		Padding(0, 1).
+		MarginBottom(1)
+
+	textStyle := lipgloss.NewStyle().Foreground(colorText).Bold(true)
+	accentStyle := lipgloss.NewStyle().Foreground(colorLavender).Bold(true)
 	taglineStyle := lipgloss.NewStyle().Foreground(colorSubtext).Italic(true)
 
 	var b strings.Builder
-	for i, line := range brandLines {
-		style := lipgloss.NewStyle().Foreground(colors[i]).Bold(true)
-		b.WriteString(style.Render(line))
-		b.WriteString("\n")
+
+	// Header line inside box
+	b.WriteString(accentStyle.Render(" ⚡ SYSTEM ONLINE ") + strings.Repeat(" ", 32) + accentStyle.Render(" MEM: OK 100% ") + "\n\n")
+
+	// Logo body
+	for _, line := range logoText {
+		b.WriteString(" " + textStyle.Render(line) + "\n")
 	}
-	b.WriteString(taglineStyle.Render("   engram — An elephant never forgets"))
 	b.WriteString("\n")
 
-	return b.String()
+	// Footer inside box
+	b.WriteString(taglineStyle.Render(" > engram — An elephant never forgets"))
+
+	return frameStyle.Render(b.String()) + "\n"
 }
 
 // ─── View (main router) ─────────────────────────────────────────────────────

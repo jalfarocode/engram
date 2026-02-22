@@ -2,22 +2,22 @@ package tui
 
 import "github.com/charmbracelet/lipgloss"
 
-// ─── Colors (Catppuccin Mocha-inspired palette) ──────────────────────────────
+// ─── Colors (Engram Elephant palette) ─────────────────────────────────────────
 
 var (
-	colorBase     = lipgloss.Color("#1e1e2e") // Background
-	colorSurface  = lipgloss.Color("#313244") // Surface
-	colorOverlay  = lipgloss.Color("#45475a") // Borders
-	colorText     = lipgloss.Color("#cdd6f4") // Main text
-	colorSubtext  = lipgloss.Color("#a6adc8") // Secondary text
-	colorLavender = lipgloss.Color("#b4befe") // Primary accent
-	colorGreen    = lipgloss.Color("#a6e3a1") // Success / counts
-	colorPeach    = lipgloss.Color("#fab387") // Warnings / types
-	colorRed      = lipgloss.Color("#f38ba8") // Errors
-	colorBlue     = lipgloss.Color("#89b4fa") // Links / IDs
-	colorMauve    = lipgloss.Color("#cba6f7") // Highlights
-	colorYellow   = lipgloss.Color("#f9e2af") // Session info
-	colorTeal     = lipgloss.Color("#94e2d5") // Search highlights
+	colorBase     = lipgloss.Color("#191724") // Deep purple/black base
+	colorSurface  = lipgloss.Color("#1f1d2e") // Slightly lighter panel bg
+	colorOverlay  = lipgloss.Color("#6e6a86") // Muted purple borders
+	colorText     = lipgloss.Color("#e0def4") // Light lavender text
+	colorSubtext  = lipgloss.Color("#908caa") // Dim lavender
+	colorLavender = lipgloss.Color("#c4a7e7") // Primary brand purple
+	colorGreen    = lipgloss.Color("#9ccfd8") // Cyan/Teal for "success" (matches lightning)
+	colorPeach    = lipgloss.Color("#f6c177") // Warm accent
+	colorRed      = lipgloss.Color("#eb6f92") // Soft red
+	colorBlue     = lipgloss.Color("#31748f") // Deep cyan
+	colorMauve    = lipgloss.Color("#ebbcba") // Soft pink/mauve
+	colorYellow   = lipgloss.Color("#f1ca93") // Gold
+	colorTeal     = lipgloss.Color("#9ccfd8") // Bright Cyan (Lightning)
 )
 
 // ─── Layout Styles ───────────────────────────────────────────────────────────
@@ -25,6 +25,7 @@ var (
 var (
 	// App frame
 	appStyle = lipgloss.NewStyle().
+			Foreground(colorText).
 			Padding(1, 2)
 
 	// Header bar
@@ -66,7 +67,7 @@ var (
 
 	// Stat card container
 	statCardStyle = lipgloss.NewStyle().
-			BorderStyle(lipgloss.RoundedBorder()).
+			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(colorOverlay).
 			Padding(1, 2).
 			MarginBottom(1)
@@ -159,7 +160,7 @@ var (
 var (
 	// Timeline focus observation
 	timelineFocusStyle = lipgloss.NewStyle().
-				BorderStyle(lipgloss.RoundedBorder()).
+				BorderStyle(lipgloss.NormalBorder()).
 				BorderForeground(colorLavender).
 				Padding(0, 1)
 
@@ -177,8 +178,9 @@ var (
 
 var (
 	searchInputStyle = lipgloss.NewStyle().
-				BorderStyle(lipgloss.RoundedBorder()).
+				BorderStyle(lipgloss.NormalBorder()).
 				BorderForeground(colorLavender).
+				Foreground(colorText).
 				Padding(0, 1).
 				MarginBottom(1)
 
