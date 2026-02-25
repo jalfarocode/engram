@@ -9,7 +9,7 @@ import (
 
 // ─── Logo ────────────────────────────────────────────────────────────────────
 
-func renderLogo() string {
+func renderLogo(version string) string {
 	logoText := []string{
 		`███████ ███    ██  ██████  ██████   █████  ███    ███ `,
 		`██      ████   ██ ██       ██   ██ ██   ██ ████  ████ `,
@@ -41,18 +41,14 @@ func renderLogo() string {
 	// Header line inside box (Cyber-Elephant Terminal)
 	b.WriteString(accentStyle.Render(" 🐘 SYSTEM ONLINE ") + strings.Repeat(" ", 32) + accentStyle.Render(" MEM: OK 100% ") + "\n\n")
 
-	// Logo body with gradient
+	// Logo body with gradient (logoText and colors are always the same length)
 	for i, line := range logoText {
-		if i < len(colors) {
-			b.WriteString(" " + lipgloss.NewStyle().Foreground(colors[i]).Bold(true).Render(line) + "\n")
-		} else {
-			b.WriteString(" " + lipgloss.NewStyle().Foreground(colorText).Bold(true).Render(line) + "\n")
-		}
+		b.WriteString(" " + lipgloss.NewStyle().Foreground(colors[i]).Bold(true).Render(line) + "\n")
 	}
 	b.WriteString("\n")
 
 	// Footer inside box
-	b.WriteString(taglineStyle.Render(" > engram — An elephant never forgets"))
+	b.WriteString(taglineStyle.Render(" > engram " + version + " — An elephant never forgets"))
 
 	return frameStyle.Render(b.String()) + "\n"
 }
@@ -99,7 +95,7 @@ func (m Model) viewDashboard() string {
 	var b strings.Builder
 
 	// Logo header
-	b.WriteString(renderLogo())
+	b.WriteString(renderLogo(m.Version))
 	b.WriteString("\n")
 
 	// Stats card

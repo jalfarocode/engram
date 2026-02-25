@@ -82,6 +82,7 @@ type setupInstallMsg struct {
 
 type Model struct {
 	store      *store.Store
+	Version    string
 	Screen     Screen
 	PrevScreen Screen
 	Width      int
@@ -127,7 +128,7 @@ type Model struct {
 }
 
 // New creates a new TUI model connected to the given store.
-func New(s *store.Store) Model {
+func New(s *store.Store, version string) Model {
 	ti := textinput.New()
 	ti.Placeholder = "Search memories..."
 	ti.CharLimit = 256
@@ -139,6 +140,7 @@ func New(s *store.Store) Model {
 
 	return Model{
 		store:        s,
+		Version:      version,
 		Screen:       ScreenDashboard,
 		SearchInput:  ti,
 		SetupSpinner: sp,

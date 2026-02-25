@@ -131,8 +131,8 @@ func TestInstallGeminiCLIInjectsMCPConfig(t *testing.T) {
 	}
 
 	args, ok := engram["args"].([]any)
-	if !ok || len(args) != 1 || args[0] != "mcp" {
-		t.Fatalf("expected args [mcp], got %#v", engram["args"])
+	if !ok || len(args) != 2 || args[0] != "mcp" || args[1] != "--tools=agent" {
+		t.Fatalf("expected args [mcp --tools=agent], got %#v", engram["args"])
 	}
 
 	if _, ok := mcpServers["other"]; !ok {
@@ -233,7 +233,7 @@ func TestInstallCodexInjectsTOMLAndIsIdempotent(t *testing.T) {
 		if !strings.Contains(text, "command = \"engram\"") {
 			t.Fatalf("expected engram command in config, got:\n%s", text)
 		}
-		if !strings.Contains(text, "args = [\"mcp\"]") {
+		if !strings.Contains(text, `args = ["mcp", "--tools=agent"]`) {
 			t.Fatalf("expected engram args in config, got:\n%s", text)
 		}
 		instructionsPath := filepath.Join(home, ".codex", "engram-instructions.md")

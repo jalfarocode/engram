@@ -38,10 +38,12 @@ var (
 	newHTTPServer = server.New
 	startHTTP     = (*server.Server).Start
 
-	newMCPServer = mcp.NewServer
-	serveMCP     = mcpserver.ServeStdio
+	newMCPServer          = mcp.NewServer
+	newMCPServerWithTools = mcp.NewServerWithTools
+	resolveMCPTools       = mcp.ResolveTools
+	serveMCP              = mcpserver.ServeStdio
 
-	newTUIModel   = tui.New
+	newTUIModel   = func(s *store.Store) tui.Model { return tui.New(s, version) }
 	newTeaProgram = tea.NewProgram
 	runTeaProgram = (*tea.Program).Run
 
@@ -150,13 +152,31 @@ func cmdServe(cfg store.Config) {
 }
 
 func cmdMCP(cfg store.Config) {
+	// Parse --tools flag: engram mcp --tools=agent
+	toolsFilter := ""
+	for i := 2; i < len(os.Args); i++ {
+		if strings.HasPrefix(os.Args[i], "--tools=") {
+			toolsFilter = strings.TrimPrefix(os.Args[i], "--tools=")
+		} else if os.Args[i] == "--tools" && i+1 < len(os.Args) {
+			toolsFilter = os.Args[i+1]
+			i++
+		}
+	}
+
 	s, err := storeNew(cfg)
 	if err != nil {
 		fatal(err)
 	}
 	defer s.Close()
 
-	mcpSrv := newMCPServer(s)
+	var mcpSrv *mcpserver.MCPServer
+	if toolsFilter != "" {
+		allowlist := resolveMCPTools(toolsFilter)
+		mcpSrv = newMCPServerWithTools(s, allowlist)
+	} else {
+		mcpSrv = newMCPServer(s)
+	}
+
 	if err := serveMCP(mcpSrv); err != nil {
 		fatal(err)
 	}
@@ -692,7 +712,10 @@ Usage:
 
 Commands:
   serve [port]       Start HTTP API server (default: 7437)
-  mcp                Start MCP server (stdio transport, for any AI agent)
+  mcp [--tools=PROFILE] Start MCP server (stdio transport, for any AI agent)
+                       Profiles: agent (11 tools), admin (3 tools), all (default, 14)
+                       Combine: --tools=agent,admin or pick individual tools
+                       Example: engram mcp --tools=agent
   tui                Launch interactive terminal UI
   search <query>     Search memories [--type TYPE] [--project PROJECT] [--scope SCOPE] [--limit N]
   save <title> <msg> Save a memory  [--type TYPE] [--project PROJECT] [--scope SCOPE]
@@ -720,7 +743,7 @@ MCP Configuration (add to your agent's config):
       "engram": {
         "type": "stdio",
         "command": "engram",
-        "args": ["mcp"]
+        "args": ["mcp", "--tools=agent"]
       }
     }
   }

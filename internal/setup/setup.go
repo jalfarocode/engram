@@ -59,7 +59,7 @@ type Result struct {
 }
 
 const claudeCodeMarketplace = "Gentleman-Programming/engram"
-const codexEngramBlock = "[mcp_servers.engram]\ncommand = \"engram\"\nargs = [\"mcp\"]"
+const codexEngramBlock = "[mcp_servers.engram]\ncommand = \"engram\"\nargs = [\"mcp\", \"--tools=agent\"]"
 
 const memoryProtocolMarkdown = `## Engram Persistent Memory — Protocol
 
@@ -226,7 +226,7 @@ func installOpenCode() (*Result, error) {
 		// Non-fatal: plugin works, MCP just needs manual config
 		fmt.Fprintf(os.Stderr, "warning: could not auto-register MCP server in opencode.json: %v\n", err)
 		fmt.Fprintf(os.Stderr, "  Add manually to your opencode.json under \"mcp\":\n")
-		fmt.Fprintf(os.Stderr, "  \"engram\": { \"type\": \"local\", \"command\": [\"engram\", \"mcp\"], \"enabled\": true }\n")
+		fmt.Fprintf(os.Stderr, "  \"engram\": { \"type\": \"local\", \"command\": [\"engram\", \"mcp\", \"--tools=agent\"], \"enabled\": true }\n")
 	} else {
 		files = 2
 	}
@@ -274,10 +274,10 @@ func injectOpenCodeMCP() error {
 		return nil // already registered, nothing to do
 	}
 
-	// Add engram MCP entry
+	// Add engram MCP entry (agent profile — only tools agents need)
 	engramEntry := map[string]interface{}{
 		"type":    "local",
-		"command": []string{"engram", "mcp"},
+		"command": []string{"engram", "mcp", "--tools=agent"},
 		"enabled": true,
 	}
 	entryJSON, err := jsonMarshalFn(engramEntry)
@@ -415,7 +415,7 @@ func injectGeminiMCP(configPath string) error {
 
 	engramEntry := map[string]any{
 		"command": "engram",
-		"args":    []string{"mcp"},
+		"args":    []string{"mcp", "--tools=agent"},
 	}
 	entryJSON, err := jsonMarshalFn(engramEntry)
 	if err != nil {
