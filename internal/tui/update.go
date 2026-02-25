@@ -174,6 +174,7 @@ func (m Model) handleDashboardKeys(key string) (tea.Model, tea.Cmd) {
 		m.PrevScreen = ScreenDashboard
 		m.Screen = ScreenSearch
 		m.Cursor = 0
+		m.SearchInput.SetValue("")
 		m.SearchInput.Focus()
 		return m, nil
 	case "q":
@@ -188,6 +189,7 @@ func (m Model) handleDashboardSelection() (tea.Model, tea.Cmd) {
 		m.PrevScreen = ScreenDashboard
 		m.Screen = ScreenSearch
 		m.Cursor = 0
+		m.SearchInput.SetValue("")
 		m.SearchInput.Focus()
 		return m, nil
 	case 1: // Recent observations
@@ -300,6 +302,7 @@ func (m Model) handleSearchResultsKeys(key string) (tea.Model, tea.Cmd) {
 		m.SearchInput.Focus()
 		return m, nil
 	case "esc", "q":
+		m.PrevScreen = ScreenDashboard
 		m.Screen = ScreenSearch
 		m.Cursor = 0
 		m.Scroll = 0
